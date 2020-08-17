@@ -8,3 +8,4 @@ The app is hosted online on [https://athief.shinyapps.io/GCP-Bucket](https://ath
 - [ ] Populate first tab with main bucket explanations, pros/cons, and details on actions.
 - [ ] Write Github README
 - [ ] Cite GCP data sources and link to them
+- [ ] Add choice of EU region
