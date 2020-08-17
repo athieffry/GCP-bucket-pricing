@@ -1,5 +1,6 @@
 # Shiny App to visualize and predict Google Cloud Compute Bucket pricing
 # Axel Thieffry - August 2020
+# Version 1.1
 
 library(shiny)
 library(tidyverse)
