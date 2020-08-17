@@ -13,7 +13,7 @@ library(shinythemes)
 ui <- fluidPage(theme=shinytheme('united'),
     # title
     titlePanel('Google Cloud Platform - Bucket pricing'),
-    h4('Based on Regional location (Finland or Netherlands)'),
+    h4('Based on Regional location'),
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(width=3,
@@ -35,22 +35,47 @@ ui <- fluidPage(theme=shinytheme('united'),
         mainPanel(
             tabsetPanel(
                     tabPanel(title='GCP Buckets',
-                             h1('This is H1'),
-                             h2('This is H2'),
-                             h3('This is H3'),
-                             'TODO: fill in this page with types of Bucket, their pros/cons, redundancy, speed, and detail the types of operations.',
-                             'Also add some links towards the official GCP documentation and pricing list.'),
+                             tags$h4('Introduction'),
+                             'This app estimates the costs of Google Cloud Storage solutions (buckets) according to the main price deteminants such as 
+                             (i) the hosting region, (ii) the bucket type, (iii) the storage volume, and (iv) the usage time. Prices are available in USD and can be converted into DKK. 
+                             Nominal USD prices were manually gathered from the Bucket creation page on the Google Cloud Console. While the main concepts linked to buckets and their pricing are 
+                             recapitulated here, consulting of the ', tags$a(href='https://cloud.google.com/storage/docs', 'full official documentation'), ' is highly recommended.', br(),
+                             hr(),
+                             tags$h4('Basic bucket price determinants'),
+                             tags$b('Region'), br(),
+                             'As opposed to ', tags$em('Multi-Region'), ' and ', tags$em('Dual-Region'), ', ', tags$em('Regional'),' buckets are hosted only in one location. 
+                             This app focuses solely on bucket pricing for the Regional location amongst European countries. The full list of regions is available ', tags$a(href='https://cloud.google.com/storage/docs/locations#location-r', 'here'), '.', br(), br(),
+                             tags$b('Bucket classes'), br(),
+                             tableOutput('bucket_class'),
+                             tags$b('Storage volume'), br(),
+                             'Naturally, data stored in a bucket incur charges based on the bucket class and the volume of data. 
+                             Bucket classes intended for increased access have a higher per-Gb storage pricing. 
+                             Note that the total bucket size constitutes the basis for cost calculation, independently of the proportion of occupied space in that bucket. ', br(), br(),
+                             tags$b('Retrieval'), br(),
+                             'There are costs associated with retrieving data or metadata, including reading, copying, or rewriting. 
+                             Those only apply for Nearline, Coldline, and Archive classes which are intended for infrequently accessed data. 
+                             Only the retried monthly volume is charged, not the entier bucket capacity.', br(), br(),
+                             tags$b('Network usage (egress)'), br(),
+                             'Network egress costs apply when moving data between buckets or when another Google Cloud service access data in the bucket. 
+                             Nevertheless, those are FREE when data moves within the same location (region). This app does not assumes costs projection based on network usage. 
+                             Read more ', tags$a(href='https://cloud.google.com/storage/pricing#network-buckets', 'here.'), br(), br(),
+                             tags$b('Operations'), br(),
+                             'Operations (ops) are actions that modify or retrieve information about buckets and objects in Cloud Storage. There are two types of operations:', br(),
+                             '> Class A ops: Adding objects (aka files), list of bucket, listing of objects.', br(),
+                             '> Class B ops: Objet GETs, retrieving bucket and object metadata.', br(),
+                             tags$a(href='https://cloud.google.com/storage/pricing#operations-by-class', 'More information on operations.')
+                             ),
                     tabPanel(title='Nominal Pricing',
+                             h4('At-rest nominal princing'),
                              plotOutput('nominal_pricing_plot'),
-                             textOutput('txtout_1'),
-                             textOutput('txtout_2'),
-                             textOutput('txtout_3'),
-                             textOutput('txtout_4'),
-                             h4(textOutput('title_1')),
-                             tableOutput('nominal_pricing_table')),
+                             tableOutput('nominal_pricing_table')
+                             ),
                     tabPanel(title='Cost Projection',
+                             h4('At-rest cost projection'),
                              plotOutput('priced_plot'),
-                             tableOutput('table_prices'))
+                             tableOutput('table_prices'),
+                             '*Those projections do not include minimum duration.'
+                             )
                         )
                   )
                 )
@@ -61,14 +86,18 @@ ui <- fluidPage(theme=shinytheme('united'),
 ##############################
 server <- function(input, output) {
     
-    # S0. make heatmap color palette
+    # S0. Bucket classes (first tab)
+    output$bucket_class <- renderTable({ tibble('class'=c('STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'),
+                                                `Min. duration`=c('/', '30 days', '90 days', '365 days'),
+                                                `Typical access type`=c('frequent', '1x / month', '1x / quarter', 'very rare'),
+                                                `Recommended storage time`=c('short', 'mid', 'longer', 'longest'),
+                                                ) %>%
+                                         as.data.frame() %>%
+                                         column_to_rownames('class')
+                                      }, striped=T, bordered=T, hover=T, spacing='xs', width='100%', align='c', rownames=T)
+        
+    # S1. make heatmap color palette
     heatmap_colors <- colorRampPalette(colors=c('white', 'navy', 'red'))
-    
-    # S1. Layout text
-    output$txtout_1 <- renderText({'Storage & Retrieval: USD / Gb / month'})
-    output$txtout_2 <- renderText({'Class A & B operations: USD / 1000 operations'})
-    output$txtout_3 <- renderText({'ex. Class A: upload objects (file), modify permissions'})
-    output$txtout_4 <- renderText({'ex. Class B: view metadata, retrieve bucket & permissions'})
 
     # S2. select data frame with nominal pricing according to selected region
     # data gathered from Google "Cloud Console > Storage > Create a Bucket" (Regional storage type)
@@ -109,7 +138,7 @@ server <- function(input, output) {
                                                                                     geom_bar(stat='identity', position=position_dodge(), lwd=.3, col='black', alpha=.6) +
                                                                                     cowplot::theme_cowplot() +
                                                                                     scale_y_continuous(expand=c(0, 0)) +
-                                                                                    scale_fill_brewer(palette='Dark2', name='Bucket type') +
+                                                                                    scale_fill_brewer(palette='Set1', name='Bucket type') +
                                                                                     labs(x='', y=paste(input$currency, '/ Gb / month'), title='Price per "Action"') +
                                                                                     geom_text(aes(y=USD * 1.1, label="")) # adds a blank layer to increase space on top (Y-axis)
                                                     
