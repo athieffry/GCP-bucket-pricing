@@ -18,12 +18,7 @@ ui <- fluidPage(theme=shinytheme('united'),
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(width=3,
-                     selectInput(inputId='region', label='Region', choices=list('Finland',
-                                                                                'Belgium',
-                                                                                'Netherlands',
-                                                                                'London',
-                                                                                'Frankfurt',
-                                                                                'Zurich'), selected='Finland', multiple=F),
+                     selectInput(inputId='region', label='Region', choices=list('Finland', 'Belgium', 'Netherlands', 'London', 'Frankfurt', 'Zurich'), selected='Finland', multiple=F),
                      radioButtons(inputId='view', label='View', choices=list('Action', 'Bucket', 'Heatmap'), selected='Action'),
                      radioButtons(inputId='currency', label='Currency', choices=list('USD', 'DKK'), selected='USD', inline=T),
                      sliderInput(inputId='months', label='Months:', min=1, max=36, value=1, step=1),
@@ -237,9 +232,7 @@ server <- function(input, output) {
                                                                   display_numbers=T, number_format="%.f", number_color='white', fontsize_number=12, color=heatmap_colors(40), annotation_row=heatmap_sum_anot)
                                              }
                                     })
-    
 }
-
-
+    
 ########## RUN ##########
 shinyApp(ui=ui, server=server)
