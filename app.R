@@ -65,13 +65,13 @@ ui <- fluidPage(theme=shinytheme('united'),
                              h4('At-rest nominal princing'),
                              plotOutput('nominal_pricing_plot'),
                              tableOutput('nominal_pricing_table')
-                             ),
+                            ),
                     tabPanel(title='Cost Projection',
                              h4('At-rest cost projection'),
                              plotOutput('priced_plot'),
                              tableOutput('table_prices'),
                              '*Those projections do not include minimum duration.'
-                             )
+                            )
                         )
                   )
                 )
