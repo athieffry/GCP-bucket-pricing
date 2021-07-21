@@ -1,7 +1,6 @@
 # Shiny App to visualize and predict Google Cloud Compute Bucket pricing
 # Axel Thieffry - August 2020
 # Version 1.1
-
 library(shiny)
 library(tidyverse)
 library(magrittr)
@@ -15,7 +14,7 @@ ui <- fluidPage(theme=shinytheme('united'),
     # title
     titlePanel('Google Cloud Platform - Bucket pricing'),
     h4('Based on Regional location'),
-    # Sidebar with a slider input for number of bins 
+    # Sidebar with a slider input for number of bins
     sidebarLayout(
         sidebarPanel(width=3,
                      selectInput(inputId='region', label='Region', choices=list('Finland', 'Belgium', 'Netherlands', 'London', 'Frankfurt', 'Zurich'), selected='Finland', multiple=F),
@@ -32,28 +31,28 @@ ui <- fluidPage(theme=shinytheme('united'),
             tabsetPanel(
                     tabPanel(title='GCP Buckets',
                              tags$h4('Introduction'),
-                             'This app estimates the costs of Google Cloud Storage solutions (buckets) according to the main price deteminants such as 
-                             (i) the hosting region, (ii) the bucket type, (iii) the storage volume, and (iv) the usage time. Prices are available in USD and can be converted into DKK. 
-                             Nominal USD prices were manually gathered from the Bucket creation page on the Google Cloud Console. While the main concepts linked to buckets and their pricing are 
+                             'This app estimates the costs of Google Cloud Storage solutions (buckets) according to the main price deteminants such as
+                             (i) the hosting region, (ii) the bucket type, (iii) the storage volume, and (iv) the usage time. Prices are available in USD and can be converted into DKK.
+                             Nominal USD prices were manually gathered from the Bucket creation page on the Google Cloud Console. While the main concepts linked to buckets and their pricing are
                              recapitulated here, consulting of the ', tags$a(href='https://cloud.google.com/storage/docs', 'full official documentation'), ' is highly recommended.', br(),
                              hr(),
                              tags$h4('Basic bucket price determinants'),
                              tags$b('Region'), br(),
-                             'As opposed to ', tags$em('Multi-Region'), ' and ', tags$em('Dual-Region'), ', ', tags$em('Regional'),' buckets are hosted only in one location. 
+                             'As opposed to ', tags$em('Multi-Region'), ' and ', tags$em('Dual-Region'), ', ', tags$em('Regional'),' buckets are hosted only in one location.
                              This app focuses solely on bucket pricing for the Regional location amongst European countries. The full list of regions is available ', tags$a(href='https://cloud.google.com/storage/docs/locations#location-r', 'here'), '.', br(), br(),
                              tags$b('Bucket classes'), br(),
                              tableOutput('bucket_class'),
                              tags$b('Storage volume'), br(),
-                             'Naturally, data stored in a bucket incur charges based on the bucket class and the volume of data. 
-                             Bucket classes intended for increased access have a higher per-Gb storage pricing. 
+                             'Naturally, data stored in a bucket incur charges based on the bucket class and the volume of data.
+                             Bucket classes intended for increased access have a higher per-Gb storage pricing.
                              Note that the total bucket size constitutes the basis for cost calculation, independently of the proportion of occupied space in that bucket. ', br(), br(),
                              tags$b('Retrieval'), br(),
-                             'There are costs associated with retrieving data or metadata, including reading, copying, or rewriting. 
-                             Those only apply for Nearline, Coldline, and Archive classes which are intended for infrequently accessed data. 
+                             'There are costs associated with retrieving data or metadata, including reading, copying, or rewriting.
+                             Those only apply for Nearline, Coldline, and Archive classes which are intended for infrequently accessed data.
                              Only the retried monthly volume is charged, not the entier bucket capacity.', br(), br(),
                              tags$b('Network usage (egress)'), br(),
-                             'Network egress costs apply when moving data between buckets or when another Google Cloud service access data in the bucket. 
-                             Nevertheless, those are FREE when data moves within the same location (region). This app does not assumes costs projection based on network usage. 
+                             'Network egress costs apply when moving data between buckets or when another Google Cloud service access data in the bucket.
+                             Nevertheless, those are FREE when data moves within the same location (region). This app does not assumes costs projection based on network usage.
                              Read more ', tags$a(href='https://cloud.google.com/storage/pricing#network-buckets', 'here.'), br(), br(),
                              tags$b('Operations'), br(),
                              'Operations (ops) are actions that modify or retrieve information about buckets and objects in Cloud Storage. There are two types of operations:', br(),
@@ -81,7 +80,7 @@ ui <- fluidPage(theme=shinytheme('united'),
 ########### SERVER ###########
 ##############################
 server <- function(input, output) {
-    
+
     # S0. Bucket classes (first tab)
     output$bucket_class <- renderTable({ tibble('class'=c('STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'),
                                                 `Min. duration`=c('/', '30 days', '90 days', '365 days'),
@@ -91,14 +90,14 @@ server <- function(input, output) {
                                          as.data.frame() %>%
                                          column_to_rownames('class')
                                       }, striped=T, bordered=T, hover=T, spacing='xs', width='100%', align='c', rownames=T)
-        
+
     # S1. make heatmap color palette
     heatmap_colors <- colorRampPalette(colors=c('white', 'navy', 'red'))
 
     # S2. select data frame with nominal pricing according to selected region
     # data gathered from Google "Cloud Console > Storage > Create a Bucket" (Regional storage type)
     bucket_levels <- factor(c('STANDARD', 'NEARLINE', 'COLDLINE', 'ARCHIVE'))
-    
+
     bucket_nominal_df <- reactive({ # prices for: Finland (eu-north1), Belgium (eu-west1), Netherlands (eu-west4)
                                     if (input$region %in% c('Finland', 'Belgium', 'Netherlands')) { data.frame('Bucket'=bucket_levels,
                                                                                                                'Storage'=c(0.02, 0.01, 0.004, 0.0012),
@@ -129,7 +128,7 @@ server <- function(input, output) {
                                                       melt(id.vars='Bucket', variable.name='Action', value.name='USD') %>%
                                                       mutate('Bucket'=factor(Bucket, levels=bucket_levels)) %>%
                                                       { if (input$currency == 'DKK') mutate(., 'USD'=USD*6.34) else . }
-                                                
+
                                                 if (input$view == 'Action') {ggplot(df, aes(x=Action, y=USD, fill=Bucket)) +
                                                                                     geom_bar(stat='identity', position=position_dodge(), lwd=.3, col='black', alpha=.6) +
                                                                                     cowplot::theme_cowplot() +
@@ -137,7 +136,7 @@ server <- function(input, output) {
                                                                                     scale_fill_brewer(palette='Set1', name='Bucket type') +
                                                                                     labs(x='', y=paste(input$currency, '/ Gb / month'), title='Price per "Action"') +
                                                                                     geom_text(aes(y=USD * 1.1, label="")) # adds a blank layer to increase space on top (Y-axis)
-                                                    
+
                                                 } else if (input$view == 'Bucket') { ggplot(df, aes(x=Action, y=USD, fill=Action)) +
                                                                                             geom_bar(stat='identity', position=position_dodge(), lwd=.3, col='black', alpha=.6) +
                                                                                             cowplot::theme_cowplot() + theme(axis.text.x=element_text(angle=45, hjust=1)) +
@@ -146,24 +145,24 @@ server <- function(input, output) {
                                                                                             scale_fill_brewer(palette='Paired', name='Action') +
                                                                                             labs(x='', y=paste(input$currency, '/ Gb / month'), title='Price per storage type (aka bucket)') +
                                                                                             geom_text(aes(y=USD * 1.1, label=""))
-                                                    
+
                                                 } else { heatmap_df <- bucket_nominal_df() %>%
                                                                        column_to_rownames('Bucket') %>%
                                                                        { if (input$currency == 'DKK') .*6.34 else . }
-                                                         
+
                                                          pheatmap::pheatmap(heatmap_df, cluster_rows=F, cluster_cols=F, cellheight=50, cellwidth=50, main=paste0('Heatmap: Price per "Action"\n(', input$currency, '/ Gb / month)'),
                                                                             display_numbers=T, number_color='white', fontsize_number=12, color=heatmap_colors(40))
                                                         }
                                                 })
 
-    
+
     # S4. Nominal Pricing TABLE
     output$nominal_pricing_table <- renderTable({
                                                 bucket_nominal_df() %>%
                                                 column_to_rownames('Bucket') %>%
                                                 if (input$currency == 'DKK') multiply_by(., 6.34) else .
                                                 }, striped=T, bordered=T, hover=T, spacing='xs', width='100%', digits=4, align='c', rownames=T)
-    
+
     # S5. Calculated Price TABLE
     bucket_table <- reactive({
                               df <- bucket_nominal_df() %>%
@@ -173,7 +172,7 @@ server <- function(input, output) {
                                            'Class_B'=Class_B * input$classB_ops * input$months) %>%
                                     mutate('TOTAL'=rowSums(select(., -Bucket)))
                             })
-    
+
     output$table_prices <- renderTable({    if (input$currency == 'DKK') {
                                                 bucket_table() %>%
                                                 column_to_rownames('Bucket') %>%
@@ -185,7 +184,7 @@ server <- function(input, output) {
                                                 rename(`TOTAL (USD)`='TOTAL')
                                                 }
                                         }, striped=T, bordered=T, hover=T, spacing='xs', width='100%', align='c', rownames=T)
-    
+
     # S6. Usage Pricing PLOT
     output$priced_plot <- renderPlot({
                                       df <- bucket_table() %>%
@@ -195,9 +194,9 @@ server <- function(input, output) {
                                             rownames_to_column('Bucket') %>%
                                             mutate('Bucket'=factor(Bucket, levels=bucket_levels)) %>%
                                             melt(id.vars='Bucket', value.name='USD', variable.name='Action')
-                                        
+
                                       title <- paste0('Projected Price (', input$currency, '): ', input$storage_vol, ' Gb for ', input$months, ' months')
-                                        
+
                                       if (input$view == 'Action') { ggplot(df, aes(x=Action, y=USD, fill=Bucket)) +
                                                                            geom_bar(stat='identity', position=position_dodge(), col='black', lwd=.3, alpha=.6) +
                                                                            stat_summary(aes(label=round(stat(y))), fun='sum', geom='text', vjust=-.5, position=position_dodge(width=.9)) +
@@ -206,7 +205,7 @@ server <- function(input, output) {
                                                                            scale_y_continuous(expand=c(0, 0)) +
                                                                            scale_fill_brewer(palette='Set1', name='') +
                                                                            geom_text(aes(y=USD * 1.1, label=""))
-                                          
+
                                       } else if (input$view == 'Bucket') { ggplot(df, aes(x=Action, y=USD, fill=Action)) +
                                                                                   geom_bar(stat='identity', position=position_dodge(), lwd=.3, col='black', alpha=.6) +
                                                                                   stat_summary(aes(label=round(stat(y))), fun='sum', geom='text', vjust=-.5) +
@@ -216,23 +215,23 @@ server <- function(input, output) {
                                                                                   scale_y_continuous(expand=c(0, 0)) +
                                                                                   labs(x='', title=title,
                                                                                        y=paste0('Total cost (', input$currency, ')')) +
-                                                                                  
+
                                                                                   scale_fill_brewer(palette='Paired', name='Action') +
                                                                                   geom_text(aes(y=USD * 1.1, label=""))
-                                          
+
                                       } else { heatmap_df <- bucket_table() %>%
                                                              select(-matches('TOTAL')) %>%
                                                              column_to_rownames('Bucket') %>%
                                                              { if (input$currency == 'DKK') multiply_by(., 6.34) else . }
-                                              
-                                               heatmap_sum_anot <- data.frame(row.names=rownames(heatmap_df), 
+
+                                               heatmap_sum_anot <- data.frame(row.names=rownames(heatmap_df),
                                                                              'TOTAL'=rowSums(heatmap_df))
-                                              
+
                                                pheatmap::pheatmap(heatmap_df, cluster_rows=F, cluster_cols=F, cellheight=50, cellwidth=50, main=paste0('TOTAL (', input$currency, ')'),
                                                                   display_numbers=T, number_format="%.f", number_color='white', fontsize_number=12, color=heatmap_colors(40), annotation_row=heatmap_sum_anot)
                                              }
                                     })
 }
-    
+
 ########## RUN ##########
 shinyApp(ui=ui, server=server)
